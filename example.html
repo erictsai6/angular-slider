@@ -4,88 +4,16 @@
     <title>Slider for AngularJS</title>
     <!--<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootswatch/2.3.1/spruce/bootstrap.min.css">-->
     <style>
-
-	slider {
-		display:     block;
-		position:    relative;
-		height:      30px;
-		width:       500px;
-	}
-
-	slider span.bar {
-		height:     50%;
-		z-index:    0;
-		background: #eee;
-		left:       0;
-		top:        25%;
-		cursor:     pointer;
-	}
-
-	slider span.bar.selection, slider span.bar.unselected {
-	}
-
-	slider span.bar.selection {
-		background: #0a0;
-		opacity:    0.5;
-	}
-
-	slider span.bar.unselected {
-		width:      auto;
-		background: #a00;
-		opacity:    0.5;
-	}
-
-	slider span.pointer {
-		cursor:           pointer;
-		width:            15px;
-		top:              0;
-		bottom:           0;
-		background-color: #00a;
-	}
-
-	slider span.pointer:hover {
-	}
-
-	slider span.pointer.active {
-	}
-
-	slider span.bubble {
-		font-size:   0.7em;
-		line-height: 1.4em;
-		font-family: sans-serif;
-		text-align:  center;
-		text-shadow: none;
-		top:         -1.3em;
-		cursor:      pointer;
-	}
-
-	slider span.bubble.selection, slider span.bubble.limit {
-		top: 25%;
-	}
-
-	slider span.bubble.selection {
-	}
-
-	slider span.bubble.limit {
-	}
-
-	slider span.bubble.low, slider span.bubble.high {
-	}
-	
-	::-ms-tooltip {
-		display: none;
-	}
-
-	#slider-container {
-		-webkit-touch-callout: none;
-		-webkit-user-select:   none;
-		-khtml-user-select:    none;
-		-moz-user-select:      -moz-none;
-		-ms-user-select:       none;
-		user-select:           none;
-	}
-
+        #slider-container {
+            -webkit-touch-callout: none;
+            -webkit-user-select:   none;
+            -khtml-user-select:    none;
+            -moz-user-select:      -moz-none;
+            -ms-user-select:       none;
+            user-select:           none;
+        }
     </style>
+    <link href="css/angular-slider.css" rel="stylesheet" type="text/css">
 </head>
 <body id='ng-app' ng-app="ExampleApp">
 
@@ -99,33 +27,23 @@
 		Slider Widths: <input type="text" ng-model="sliderWidth" ng-init="sliderWidth = '500px'" ng-change="fireResizeEvent()" />
 		<h2>Normal</h2>
 		<h3>Single Knob</h3>
-	    <slider floor='{{ floor }}' ceiling='{{ ceiling }}' step='{{ step }}' precision='{{ precision }}' stickiness='{{ stickiness }}'
+	    <slider min-limit='{{ floor }}' max-limit='{{ ceiling }}' step='{{ step }}' precision='{{ precision }}' stickiness='{{ stickiness }}'
 	            ng-model='value' style="width: {{ sliderWidth }};"></slider>
 		Value: <input ng-model="value" type="text" />
-		<h3>Dual Knob</h3>
-	    <slider floor='{{ floor }}' ceiling='{{ ceiling }}' step='{{ step }}' precision='{{ precision }}' buffer='{{ buffer }}'
-	            stickiness='{{ stickiness }}' ng-model='values.low' ng-model-range='values.high' translate-fn='translate'
-	            translate-range-fn='translateRange' translate-combined-fn='translateCombined' style="width: {{ sliderWidth }};"></slider>
-		Values: <input ng-model="values.low" type="text" /><input ng-model="values.high" type="text" />
-		<h2>w/ Scaling functions (y=x^3)</h2>
-		<h3>Single Knob</h3>
-	    <slider floor='{{ floor }}' ceiling='{{ ceiling }}' step='{{ step }}' precision='{{ precision }}' stickiness='{{ stickiness }}'
-	            ng-model='value' scale-fn='scale' inverse-scale-fn='inverseScale' style="width: {{ sliderWidth }};"></slider>
-		<h3>Dual Knob</h3>
-	    <slider floor='{{ floor }}' ceiling='{{ ceiling }}' step='{{ step }}' precision='{{ precision }}' buffer='{{ buffer }}'
-	            stickiness='{{ stickiness }}' ng-model='values.low' ng-model-range='values.high' scale-fn='scale' inverse-scale-fn='inverseScale'
-	            translate-fn='translate' style="width: {{ sliderWidth }};"></slider>
-		<h2>in ngRepeat</h2>
-		<div ng-repeat="scope in scopes">
-		    <slider floor='{{ floor }}' ceiling='{{ ceiling }}' step='{{ step }}' precision='{{ precision }}' stickiness='{{ stickiness }}'
-		            ng-model='scope.value' style="width: {{ sliderWidth }};"></slider>
-		</div>
-		<button type="button" ng-click="addScope()">Add Slider</button><br />
+
+		<h3>Preset Value Slider</h3>
+		<slider preset-values='{{ presetValues }}' precision='{{ precision }}' stickiness='{{ stickiness }}'
+	            ng-model='newValue' style="width: {{ sliderWidth }};"></slider>
+
+        <h3>Preset Value Slider with Object List</h3>
+        <slider preset-values='{{ presetObjects }}' translate-fn="translateObject"
+                ng-model='selectedObj' style="width: {{ sliderWidth }};"
+                on-start-fn="onStartFn()"
+                on-move-fn="onMoveFn()"
+                on-end-fn="onEndFn()"></slider>
     </div>
-	<script type="text/javascript" src="lib/jquery-2.0.3.min.js"></script>
 	<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.16/angular.min.js"></script>
 	<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.16/angular-touch.min.js"></script>
-    <script src="src/rangeInputSupported.js"></script>
     <script src="src/angular-slider.js"></script>
     <script>
 	    function dump(obj) {
@@ -136,7 +54,48 @@
 
 		    return out;
 	    }
-	    angular.module('ExampleApp', ['vr.directives.slider']).controller('MainCtrl', ['$scope', function($scope) {
+	    angular.module('ExampleApp', ['ghs.directives.slider']).controller('MainCtrl', ['$scope', function($scope) {
+	    	$scope.presetValues = [1,2,3,4,5];
+
+            $scope.presetObjects = [
+                {
+                    value: 'A'
+                },
+                {
+                    value: 'B'
+                },
+                {
+                    value: 'C'
+                },
+                {
+                    value: 'D'
+                },
+                {
+                    value: 'E'
+                },
+                {
+                    value: 'F'
+                }
+            ];
+            $scope.translateObject = function(value) {
+                if (value.value) {
+                    return value.value + 'x3';
+                }
+                return '';
+            };
+
+            $scope.onStartFn = function() {
+                console.log('on start function called');
+            };
+
+            $scope.onMoveFn = function() {
+                console.log('on move function called');
+            };
+
+            $scope.onEndFn = function() {
+                console.log('Ended the drag');
+            };
+
 		    $scope.scopes = [];
 		    $scope.value = 5;
 		    $scope.values = {
@@ -160,6 +119,11 @@
 				    value : 5
 			    });
 		    };
+
+            $scope.presetTranslate = function(value) {
+                console.log('whatsup');
+                return value.value;
+            };
 
 		    $scope.translate = function(value) {
 			    return '$' + value;

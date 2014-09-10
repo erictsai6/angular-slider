@@ -1,16 +1,19 @@
 /*
  angular-slider
  (c) 2013-2014 Venturocket, Inc. http://github.com/Venturocket
- License: MIT
+  License: MIT
+
+  Modified by erictsai6
+
+  Removed dual band feature and added in presetValues
  */
-/* global AngularSlider */
-angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
+angular.module('ghs.directives.slider', ['ngTouch']).directive('slider',
 	['$timeout', '$document', '$interpolate', '$swipe',
 		function($timeout, $document, $interpolate, $swipe) {
             'use strict';
 
             /**
-             * How sticky the knobs feel...ew
+             * How sticky the knobs
              * @type {number}
              */
             var KNOB_STICKINESS = 3;
@@ -22,7 +25,7 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
             var startSymbol = $interpolate.startSymbol(), endSymbol = $interpolate.endSymbol();
 
             /**
-             * Convert a regular element to an angular element...Oh fancy! *waves hands*
+             * Convert a regular element to an jqlite element
              * @param {object} element
              * @returns {object} the new element
              */
@@ -31,7 +34,7 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
             }
 
             /**
-             * Adds 'px' to the end of a number...Yes, that's really all it does.
+             * Adds px to the number and converts it to a string
              * @param {(string|Number)} position
              * @returns {string}
              */
@@ -40,7 +43,7 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
             }
 
             /**
-             * I'm not completely sure what this does, but I have a feeling it has something to do with opacity
+             * Sets opacity of element
              * @param {object} element
              * @param {Number} opacity
              * @returns {object} the element
@@ -82,7 +85,7 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
             }
 
             /**
-             * Determines the width of the element...somehow
+             * Determines the width of the element
              * @param {object} element
              * @returns {number}
              */
@@ -92,7 +95,7 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
             }
 
             /**
-             * You wouldn't believe me if I told you, but this will tell you how wide half of the given element is!
+             * Returns half of the width of the element
              * @param {object} element
              * @returns {number}
              */
@@ -138,11 +141,11 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
              * @param {Number} [value = 0]
              * @param {Number} [precision = 0]
              * @param {Number} [step = 1/Math.pow(10, precision)]
-             * @param {Number} [floor = 0]
-             * @param {Number} [ceiling]
+             * @param {Number} [minLimit = 0]
+             * @param {Number} [maxLimit]
              * @returns {Number}
              */
-            function roundToStep(value, precision, step, floor, ceiling) {
+            function roundToStep(value, precision, step, minLimit, maxLimit) {
 
                 // precision is optional
                 if(angular.isUndefined(precision) || !precision) {
@@ -154,9 +157,9 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                     step = 1 / Math.pow(10, precision);
                 }
 
-                // floor is optional
-                if(angular.isUndefined(floor) || !floor) {
-                    floor = 0;
+                // minLimit is optional
+                if(angular.isUndefined(minLimit) || !minLimit) {
+                    minLimit = 0;
                 }
 
                 // value is optional
@@ -165,18 +168,18 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                 }
 
                 // how far from a step is the value
-                var remainder = (value - floor) % step;
+                var remainder = (value - minLimit) % step;
 
                 // round the value to a step
                 var roundedValue = remainder > (step / 2) ? value + step - remainder : value - remainder;
 
-                // ceiling is optional
-                if(angular.isUndefined(ceiling) || !ceiling) {
-                    ceiling = roundedValue;
+                // maxLimit is optional
+                if(angular.isUndefined(maxLimit) || !maxLimit) {
+                    maxLimit = roundedValue;
                 }
 
                 // bring the value back in range
-                roundedValue = Math.min(Math.max(roundedValue, floor), ceiling);
+                roundedValue = Math.min(Math.max(roundedValue, minLimit), maxLimit);
 
                 // set the precision
                 return parseFloat(roundedValue.toFixed(precision));
@@ -191,20 +194,7 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
 			function roundTo(value, step) {
 				return Math.floor((value / step) + 0.5) * step;
 			}
-
-            /**
-             * Rounds the buffer up to the nearest full step
-             * @param {Number} step
-             * @param {Number} buffer
-             * @returns {Number}
-             */
-            function stepBuffer(step, buffer) {
-                if(step > 0 && !isNaN(buffer)) {
-                    return Math.ceil(buffer / step) * step;
-                }
-                return buffer;
-            }
-
+           
             /**
              * Wraps the given expression in whatever start and end symbol this app uses
              * @param {string} exp
@@ -218,51 +208,51 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                 restrict: 'EA',
 				require: 'ngModel',
                 scope: {
-                    floor              : '@',   // the minimum possible value
-                    ceiling            : '@',   // the maximum possible value
+                    presetValues       : '@',   // array of presetValues.  Setting this will override minLimit, maxLimit,
+                                                // step/stepWidth
+
+                    minLimit           : '@',   // the minimum possible value
+                    maxLimit           : '@',   // the maximum possible value
                     step               : '@',   // how wide is each step, omit or set to 0 for no steps
                     stepWidth          : '@',   // alias of step to avoid collisions
                     precision          : '@',   // how many decimal places do we care about
-                    buffer             : '@',   // how close can the two knobs of a dual knob slider get?
-                    stickiness         : '@',   // how sticky should the knobs feel...seriously, how did this get all sticky? gross
+                    stickiness         : '@',   // how sticky should the knobs feel
                     showSteps          : '@',   // show the step value bubbles?
+
                     ngModel            : '=',   // single knob/dual know low value binding
-                    ngModelRange       : '=',   // dual knob high value binding
                     ngDisabled         : '=',   // should the slider be disabled?
                     ngChange           : '&',   // what should we do when a value is changed
                     translateFn        : '&',   // how to translate the values displayed in the bubbles
-                    translateRangeFn   : '&',   // how to translate the range bubble
-                    translateCombinedFn: '&',   // how to translate the combined bubble
                     scaleFn            : '&',   // how to scale the values
-                    inverseScaleFn     : '&'    // how to unscale the values
+                    inverseScaleFn     : '&',   // how to unscale the values
+
+                    onStartFn          : '&',   // function to call when the start touch event is detected
+                    onMoveFn           : '&',   // function to call when the move touch event is detected
+                    onEndFn            : '&'   // function to call when the end touch event is detected
                 },
                 template: // bar background
                     '<span class="bar full"></span>' + // secondary bars used for dual knobs
                     '<span class="bar steps"><span class="bubble step" ng-repeat="step in stepBubbles()"></span></span>' + // step bubbles
-                    '<span class="bar selection"></span><span class="bar unselected low"></span><span class="bar unselected high"></span>' + // the knobs
-                    '<span class="pointer low"></span><span class="pointer high"></span>' + // current value bubbles
-                    '<span class="bubble low"></span><span class="bubble high"></span><span class="bubble middle"></span><span class="bubble selection"></span>' + // low, high, middle and selection bubbles
-                    '<span class="bubble limit floor"></span><span class="bubble limit ceiling"></span>' + // upper and lower limit bubbles
-                    '<input type="range" class="input low" /><input type="range" class="input high" /><input type="range" class="input selection" />', // range sliders used for browsers that support them
+                    '<span class="pointer unselected low"></span>' +  // the knobs
+
+                    '<span class="bubble low"></span>' + // current value bubbles
+                    '<span class="bubble minLimit"></span><span class="bubble maxLimit"></span>', // upper and lower limit bubbles
 
                 compile: function(element, attributes) {
                     // are we gonna show the step bubbles?
                     var showSteps = attributes.showSteps;
 
 					// are we using 'step' or 'step-width'?
-					var stepWidth = attributes.stepWidth?'stepWidth':'step';
-
-                    // dual knob?
-                    var isDualKnob = !!attributes.ngModelRange,
+					var stepWidth = attributes.stepWidth?'stepWidth':'step',
 
                     // init element references
-                        refs = {},
+                        refs,
 
                     // which properties do we want to use?
-                        refLow = 'ngModel', refHigh = 'ngModelRange', refSel = 'selectBar',
+                        refSelected = 'ngModel',
 
                     // which properties to we want to watch for changes?
-                        watchables = ['floor', 'ceiling', 'stickiness', refLow];
+                        watchables = ['presetValues', 'minLimit', 'maxLimit', 'stickiness', refSelected];
 
                     /**
                      * Get references to all the children of the given element
@@ -283,27 +273,15 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                     /**
                      * Set the references for use later
                      * @param {Array} refs
-                     * @param {Boolean} [dual = false] is this a dual knob slider?
-                     * @param {Boolean} [inputs = false] are we using range inputs?
                      */
-                    function setReferences(refs, dual, inputs) {
+                    function setReferences(refs) {
                         return {
-                            fullBar     : refs[0],                                        // background bar
-                            stepBubs    : refs[1],                                        // the steps bubbles
-                            selBar      : dual ? refs[2] : null,                          // dual knob: the bar between knobs
-                            unSelBarLow : dual ? refs[3] : null,                          // dual knob: the bar to the left of the low knob
-                            unSelBarHigh: dual ? refs[4] : null,                          // dual knob: the bar to the right of the high knob
-                            minPtr      : dual ? refs[5] : refs[2],                       // single knob: the knob, dual knob: the low knob
-                            maxPtr      : dual ? refs[6] : null,                          // dual knob: the high knob
-                            lowBub      : dual ? refs[7] : refs[3],                       // single knob: the value bubble, dual knob: the low value bubble
-                            highBub     : dual ? refs[8] : null,                          // dual knob: the high value bubble
-                            cmbBub      : dual ? refs[9] : null,                          // dual knob: the range values bubble
-                            selBub      : dual ? refs[10] : null,                         // dual knob: the range width bubble
-                            flrBub      : dual ? refs[11] : refs[4],                      // the lower limit bubble
-                            ceilBub     : dual ? refs[12] : refs[5],                      // the upper limit bubble
-                            minInput    : inputs ? (dual ? refs[13] : refs[6]) : null,    // single knob: the actual slider input, dual knob: the low value slider input
-                            maxInput    : inputs ? (dual ? refs[14] : null) : null,       // dual knob: the high value slider input
-                            selInput    : inputs ? (dual ? refs[15] : null) : null        // dual knob: the selection slider input
+                            fullBar     : refs[0],   // background bar
+                            stepBubs    : refs[1],   // the steps bubbles
+                            currPtr     : refs[2],   // single knob: the knob
+                            currBub     : refs[3],   // single knob: the value bubble
+                            minBub      : refs[4],   // the lower limit bubble
+                            maxBub      : refs[5]   // the upper limit bubble
                         };
                     }
 
@@ -325,21 +303,11 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                         }
                         return _results;
                     })();
-                    refs = setReferences(refs, true, true);
+                    refs = setReferences(refs);
 
                     // set up the translation function
                     if(attributes.translateFn) {
                         attributes.$set('translateFn', '' + attributes.translateFn + '(value)');
-                    }
-
-                    // set up the translation function for the range bubble
-                    if(attributes.translateRangeFn) {
-                        attributes.$set('translateRangeFnFn', '' + attributes.translateRangeFn + '(low,high)');
-                    }
-
-                    // set up the translation function for the center bubble
-                    if(attributes.translateCombinedFn) {
-                        attributes.$set('translateCombinedFnFn', '' + attributes.translateCombinedFn + '(low,high)');
                     }
 
                     // set up the encoding function
@@ -358,81 +326,14 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                         right: 0
                     });
 
-                    // set up range inputs
-                    if(AngularSlider.inputtypes.range) {
-                        // we can use range inputs
-
-                        /**
-                         * default range input styles
-                         * @type {{position: string, margin: number, padding: number, opacity: number, height: string}}
-                         */
-                        var inputStyles = {
-                            position: 'absolute',
-                            margin  : 0,
-                            padding : 0,
-                            opacity : 0,
-                            height  : '100%'
-                        };
-
-                        // set up the low value range input
-                        refs.minInput.attr('step', expression('inputSteps()'));  // set the number of steps
-                        refs.minInput.attr('min', expression('floor'));          // set the minimum possible value
-                        refs.minInput.css(inputStyles);                          // apply the default styles
-                        refs.minInput.css('left', 0);                            // stick it to the left
-
-                        if(isDualKnob) {
-                            // this is a dual knob slider
-
-                            refs.minInput.attr('max', expression('ngModelRange - (buffer / 2)')); // set the maximum value of the low range input so it doesn't overlap the high range input's minimum value
-
-                            // set up the high value range input
-                            refs.maxInput.attr('step', expression('inputSteps()'));              // set the number of steps
-                            refs.maxInput.attr('min', expression('ngModel + (buffer / 2)'));  // set the minimum value of the high range input so it doesn't overlap the low range input's maximum value
-                            refs.maxInput.attr('max', expression('ceiling'));                    // set the maximum possible value
-                            refs.maxInput.css(inputStyles);                                      // apply the default styles
-
-                            // set up the selection range input
-                            refs.selInput.attr('step', expression('inputSteps()'));  // set the number of steps
-                            refs.selInput.attr('min', expression('ngModel'));     // set up the minimum value
-                            refs.selInput.attr('max', expression('ngModelRange'));    // set up the maximum falue
-                            refs.selInput.css(inputStyles);                          // apply the default styles
-                        } else {
-                            // this is single knob slider
-
-                            refs.minInput.attr('max', expression('ceiling'));    // set the maximum possible value
-                            refs.minInput.css({ width: '100%' });                // make sure it fills the entire slider
-                            refs.maxInput.remove();                              // get rid of the high value range input
-                            refs.selInput.remove();                              // get rid of the selection value range input
-                        }
-                    } else {
-                        // we can't use range inputs :(
-                        refs.minInput.remove();
-                        refs.maxInput.remove();
-                        refs.selInput.remove();
-                    }
-
                     // set up bubbles
                     bindHtml(refs.stepBubs.children().eq(0), expression('translation(step)'));
-                    bindHtml(refs.ceilBub, expression('translation(ceiling)'));
-                    bindHtml(refs.flrBub, expression('translation(floor)'));
-                    bindHtml(refs.selBub, expression('rangeTranslation(' + refLow + ',' + refHigh + ')'));
-                    bindHtml(refs.lowBub, expression('translation(' + refLow + ')'));
-                    bindHtml(refs.highBub, expression('translation(' + refHigh + ')'));
-                    bindHtml(refs.cmbBub, expression('combinedTranslation(' + refLow + ',' + refHigh + ')'));
+                    bindHtml(refs.maxBub, expression('translation(maxLimit)'));
+                    bindHtml(refs.minBub, expression('translation(minLimit)'));
+                    bindHtml(refs.currBub, expression('translation(' + refSelected + ')'));
 
                     // start to compile watchables
-                    if(isDualKnob) {
-                        // dual knob so also watch the high value and buffer
-                        watchables.push(refHigh);
-                        watchables.unshift('buffer');
-                    } else {
-                        // single knob so get rid of what we don't need
-                        var _ref1 = [refs.selBar, refs.unSelBarLow, refs.unSelBarHigh, refs.maxPtr, refs.selBub, refs.highBub, refs.cmbBub];
-                        for(var _i = 0, _len = _ref1.length; _i < _len; _i++) {
-                            element = _ref1[_i];
-                            element.remove();
-                        }
-                    }
+
                     // make sure the precision and step are first in the list
                     watchables.unshift('precision', stepWidth);
 
@@ -444,22 +345,20 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                     return {
                         post: function(scope, element, attributes, ctrl) {
                             // re-set references locally to avoid any cross contamination and disassociation when using transcluded scopes (namely ng-repeat)
-                            var refs = setReferences(getReferences(element), isDualKnob, AngularSlider.inputtypes.range);
+                            var refs = setReferences(getReferences(element));
 
                             /**
-                             * Save the decoded values so we don't have to decode every...single...time....ugh
-                             * @type {{floor: number, ceiling: number, step: number, precision: number, buffer: number, stickiness: number, ngModel: number, ngModel: number, ngModelRange: number}}
+                             * Save the decoded values so we don't have to decode every time
+                             * @type {{minLimit: number, maxLimit: number, step: number, precision: number, stickiness: number, ngModel: number, ngModel: number}}
                              */
                             scope.decodedValues = {
-                                floor        : 0,
-                                ceiling      : 0,
+                                minLimit     : 0,
+                                maxLimit     : 0,
                                 step         : 0,
                                 stepWidth    : 0,
                                 precision    : 0,
-                                buffer       : 0,
                                 stickiness   : 0,
-                                ngModel      : 0,
-                                ngModelRange : 0
+                                ngModel      : 0                               
                             };
 
                             /**
@@ -468,38 +367,14 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                              * @returns {string}
                              */
                             scope.translation = function(value) {
-                                value = parseFloat(value).toFixed(scope.precision);
+                                if (typeof value !== 'object') {
+                                    value = parseFloat(value).toFixed(scope.precision);
+                                }
                                 if(angular.isUndefined(attributes.translateFn)) {
                                     return '' + value;
                                 }
                                 return scope.translateFn({value: value});
-                            };
-
-                            /**
-                             * Apply the supplied translation function for the range if necessary
-                             * @param {(string|Number)} low
-                             * @param {(string|number)} high
-                             * @returns {string}
-                             */
-                            scope.rangeTranslation = function(low, high) {
-                                if(angular.isUndefined(attributes.translateRangeFn)) {
-                                    return 'Range: ' + scope.translation((high - low).toFixed(scope.precision));
-                                }
-                                return scope.translateRangeFn({low: low, high: high});
-                            };
-
-                            /**
-                             * Apply the supplied translation function for the center if necessary
-                             * @param {(string|Number)} low
-                             * @param {(string|number)} high
-                             * @returns {string}
-                             */
-                            scope.combinedTranslation = function(low, high) {
-                                if(angular.isUndefined(attributes.translateCombinedFn)) {
-                                    return scope.translation(low) + ' - ' + scope.translation(high);
-                                }
-                                return scope.translateCombinedFn({low: low, high: high});
-                            };
+                            };                           
 
                             /**
                              * Encode the value given
@@ -508,6 +383,9 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                              */
                             scope.encode = function(value) {
                                 if(angular.isUndefined(attributes.scaleFn) || !attributes.scaleFn) {
+                                    if (scope.presetValues) {
+                                        return scope.presetValues[value];
+                                    }
                                     return value;
                                 }
                                 return scope.scaleFn({value: value});
@@ -520,12 +398,25 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                              */
                             scope.decode = function(value) {
                                 if(angular.isUndefined(attributes.inverseScaleFn) || !attributes.inverseScaleFn) {
+                                    if (scope.presetValues) {
+                                        for (var i = 0; i < scope.presetValues.length; i++) {
+                                            if (typeof scope.presetValues[i] === 'object' &&
+                                                typeof value === 'object' &&
+                                                scope.presetValues[i].value === value.value) {
+                                                return i;
+                                            }
+                                            else if (scope.presetValues[i] === value) {
+                                                return i;
+                                            }
+                                        }
+                                        return null;
+                                    }
                                     return value;
                                 }
                                 return scope.inverseScaleFn({value: value});
                             };
 
-                            if(Math.round(scope.encode(scope.decode(1))) !== 1 || Math.round(scope.encode(scope.decode(100))) !== 100) {
+                            if(!scope.presetValues && Math.round(scope.encode(scope.decode(1))) !== 1 || Math.round(scope.encode(scope.decode(100))) !== 100) {
                                 console.warn('The scale and inverseScale functions are not perfect inverses: 1 = '+scope.encode(scope.decode(1))+'  100 = '+scope.encode(scope.decode(100)));
                             }
 
@@ -622,13 +513,7 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                              * How far from a step is the low knob?
                              * @type {number}
                              */
-                            var stickyOffsetLow = 0;
-
-                            /**
-                             * How far from a step is the high knob?
-                             * @type {number}
-                             */
-                            var stickyOffsetHigh = 0;
+                            var stickyOffset = 0;
 
                             /**
                              * Have the events been bound to the necessary inputs/elements
@@ -645,32 +530,23 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                                 angular.forEach(watchables, function(watchable) {
 
                                     // parse them to floats
-                                    scope[watchable] = parseFloat(scope[watchable]);
+                                    if (watchable === 'presetValues') {
+                                        if (typeof scope.presetValues === 'string') {
+                                            scope.presetValues = JSON.parse(scope.presetValues);
+                                        }
+                                    } else if (typeof scope[watchable] !== 'object') {
+                                        scope[watchable] = parseFloat(scope[watchable]);
+                                    }
 
-                                    if(watchable === refLow || watchable === refHigh) {
+                                    if (watchable === 'presetValues' && scope[watchable]) {
+                                        scope.minLimit = scope.presetValues[0];
+                                        scope.maxLimit = scope.presetValues[scope.presetValues.length - 1];
+                                    } else if(watchable === refSelected) {
                                         // this is the low or high value so bring them back in line with the steps
-                                        scope[watchable] = roundToStep(scope[watchable], scope.precision, scope[stepWidth], scope.floor, scope.ceiling);
-                                    } else if(watchable === 'buffer') {
-                                        if(!scope.buffer || isNaN(scope.buffer) || scope.buffer < 0) {
-                                            // the buffer is not valid, so set to 0
-                                            scope.buffer = 0;
+                                        if (scope.presetValues) {
+
                                         } else {
-                                            // this is the buffer so make sure it aligns with the steps
-                                            scope.buffer = stepBuffer(scope[stepWidth], scope.buffer);
-                                        }
-                                    } else if(watchable === 'precision') {
-                                        // make sure the precision is valid
-                                        if(!scope.precision || isNaN(scope.precision)) {
-                                            scope.precision = 0;
-                                        } else {
-                                            scope.precision = parseInt(scope.precision);
-                                        }
-                                    } else if(watchable === stepWidth) {
-                                        // make sure the step is valid
-                                        if(!scope[stepWidth] || isNaN(scope[stepWidth])) {
-                                            scope[stepWidth] = 1 / Math.pow(10, scope.precision);
-                                        } else {
-                                            scope[stepWidth] = parseFloat(scope[stepWidth].toFixed(scope.precision));
+                                            scope[watchable] = roundToStep(scope[watchable], scope.precision, scope[stepWidth], scope.minLimit, scope.maxLimit);
                                         }
                                     } else if(watchable === 'stickiness') {
                                         // make sure the stickiness is valid
@@ -682,56 +558,23 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                                     }
 
                                     // save the decoded values
-                                    scope.decodedValues[watchable] = scope.decodeRef(watchable);
-
+                                    if (watchable !== 'presetValues') {
+                                        scope.decodedValues[watchable] = scope.decodeRef(watchable);
+                                    }
                                 });
-
-                                if(isDualKnob) {
-                                    // if this is a dual knob slider
-
-                                    // make sure the low value is actually lower than the high value
-                                    if(scope[refHigh] < scope[refLow]) {
-                                        var temp = scope[refHigh];
-                                        scope[refHigh] = scope[refLow];
-                                        scope[refLow] = temp;
-                                    }
-
-                                    // get the difference between the knobs, but make sure it's rounded to a step
-                                    var diff = roundToStep(scope[refHigh] - scope[refLow], scope.precision, scope[stepWidth]);
-
-                                    if(scope.buffer > 0 && diff < scope.buffer) {
-                                        // we need a buffer but the difference is smaller than the required buffer
-
-                                        // so find the middle
-                                        var avg = scope.encode((scope.decodedValues[refLow] + scope.decodedValues[refHigh]) / 2);
-
-                                        // and set the knobs so they straddle the middle with the required amount of buffer
-                                        scope[refLow] = roundToStep(avg - (scope.buffer / 2), scope.precision, scope[stepWidth], scope.floor, scope.ceiling);
-                                        scope[refHigh] = scope[refLow] + scope.buffer;
-
-                                        if(scope[refHigh] > scope.ceiling) {
-                                            // the high value is out of range
-
-                                            // so set the high value to the maximum
-                                            scope[refHigh] = scope.ceiling;
-                                            // but keep the buffer correct
-                                            scope[refLow] = scope.ceiling - scope.buffer;
-                                        }
-                                    }
-                                }
 
                                 // save the various dimensions we'll need
                                 barWidth = width(refs.fullBar);
-                                pointerHalfWidth = halfWidth(refs.minPtr);
+                                pointerHalfWidth = halfWidth(refs.currPtr);
 
                                 minOffset = offsetLeft(refs.fullBar);
-                                maxOffset = minOffset + barWidth - width(refs.minPtr);
+                                maxOffset = minOffset + barWidth - width(refs.currPtr);
                                 offsetRange = maxOffset - minOffset;
 
-                                minValue = scope.floor;
-                                minValueDecoded = scope.decodedValues.floor;
-                                maxValue = scope.ceiling;
-                                maxValueDecoded = scope.decodedValues.ceiling;
+                                minValue = scope.minLimit;
+                                minValueDecoded = scope.decodedValues.minLimit;
+                                maxValue = scope.maxLimit;
+                                maxValueDecoded = scope.decodedValues.maxLimit;
                                 valueRange = maxValue - minValue;
                                 valueRangeDecoded = maxValueDecoded - minValueDecoded;
 
@@ -743,18 +586,15 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                              */
                             function updateDOM() {
 
-                                var dragRange,      // is the user dragging the entire range and not just one knob?
-                                    lowValueOffset,      // where did the low knob start
-                                    highValueOffset,     // where did the high knob start
-                                    pointer,        // which knob/bar is being dragged
-                                    ref;            // which value should we be changing
+                                var pointer,        // The knob/bar is being dragged
+                                    ref;            // The value should we be changing
 
                                 // update the dimensions
                                 dimensions();
 
                                 // set the limit bubble positions
-                                offset(refs.flrBub, 0);
-                                offset(refs.ceilBub, pixelize(barWidth - width(refs.ceilBub)));
+                                offset(refs.minBub, 0);
+                                offset(refs.maxBub, pixelize(barWidth - width(refs.maxBub)));
 
                                 /**
                                  * Get the offset percentage from the given absolute offset
@@ -763,42 +603,6 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                                  */
                                 function percentFromOffset(offset) {
                                     return ((offset - minOffset) / offsetRange) * 100;
-                                }
-
-                                /**
-                                 * Get the decoded value from the given offset
-                                 * @param {number} offset
-                                 * @returns {number}
-                                 */
-                                function decodedValueFromOffset(offset) {
-                                    return percentFromOffset(offset)/100 * valueRangeDecoded + minValueDecoded;
-                                }
-
-                                /**
-                                 * Get the value from the given offset
-                                 * @param {number} offset
-                                 * @returns {number}
-                                 */
-                                function valueFromOffset(offset) {
-                                    return scope.encode(decodedValueFromOffset(offset));
-                                }
-
-                                /**
-                                 * Get the absolute offset from the given decoded value
-                                 * @param {number} value
-                                 * @returns {number}
-                                 */
-                                function offsetFromDecodedValue(value) {
-									return ((value - minValueDecoded) * offsetRange) + minOffset;
-                                }
-
-                                /**
-                                 * Get the absolute offset from the given value
-                                 * @param {number} value
-                                 * @returns {number}
-                                 */
-                                function offsetFromValue(value) { // jshint unused: false
-                                    return offsetFromDecodedValue(scope.decode(value));
                                 }
 
                                 /**
@@ -817,12 +621,37 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                                 }
 
                                 /**
+                                 * Returns percent from the preset index
+                                 * @param index
+                                 */
+                                function percentFromPresetIndex(index) {
+                                    return index / (scope.presetValues.length - 1) * 100;
+                                }
+
+                                /**
                                  * Get the offset percentage from the given value
                                  * @param {number} value
                                  * @returns {number}
                                  */
                                 function percentFromValue(value) {
                                     return percentFromDecodedValue(scope.decode(value));
+                                }
+
+                                /**
+                                 * Takes in a percent and sets it to a presetPercentage
+                                 * Must work in tandem with presetValues
+                                 * @param percent
+                                 */
+                                function usePresetPercent(percent) {
+                                    return Math.round(percent / 100 * (scope.presetValues.length-1)) / (scope.presetValues.length - 1) * 100;
+                                }
+
+                                /**
+                                 * Takes in a percent and sets it to a presetIndex
+                                 * @param percent
+                                 */
+                                function getPresetIndex(percent) {
+                                    return Math.round(percent/100 * (scope.presetValues.length - 1));
                                 }
 
                                 /**
@@ -891,162 +720,35 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                                      * The base percent for the low knob
                                      * @type {number}
                                      */
-                                    var rawLowPercent = percentFromDecodedValue(scope.decodedValues[refLow]);
+                                    var rawLowPercent;
+                                    if (scope.presetValues) {
+                                        rawLowPercent = percentFromPresetIndex(scope.decodedValues[refSelected]);
+                                    } else {
+                                        rawLowPercent = percentFromDecodedValue(scope.decodedValues[refSelected]);
+                                    }
 
                                     /**
                                      * The width in percent of a step above the low value
                                      * @type {number}
                                      */
-                                    var stepWidthPercentAboveLow = percentFromValue(scope[refLow] + scope[stepWidth]) - rawLowPercent;
+                                    var stepWidthPercentAboveLow = percentFromValue(scope[refSelected] + scope[stepWidth]) - rawLowPercent;
 
                                     /**
                                      * The width in percent of a step below the low value
                                      * @type {number}
                                      */
-                                    var stepWidthPercentBelowLow = rawLowPercent - percentFromValue(scope[refLow] - scope[stepWidth]);
-
-                                    /**
-                                     * The width in percent of the buffer above the low value
-                                     * @type {number}
-                                     */
-                                    var bufferWidthPercentLow = percentFromValue(scope[refLow] + scope.buffer) - rawLowPercent;
-
-                                    /**
-                                     * The width in percent of the pointer
-                                     * @type {number}
-                                     */
-                                    var ptrHalfWidthPercent = percentFromOffset(pointerHalfWidth + minOffset);
+                                    var stepWidthPercentBelowLow = rawLowPercent - percentFromValue(scope[refSelected] - scope[stepWidth]);                                    
 
                                     /**
                                      * The percent for the low knob after the stretch has been applied
                                      * @type {number}
                                      */
-                                    var stretchedLowPercent = rawLowPercent + percentStretch(stickyOffsetLow, stickyOffsetLow > 0?stepWidthPercentAboveLow:stepWidthPercentBelowLow);
+                                    var stretchedLowPercent = rawLowPercent + percentStretch(stickyOffset, stickyOffset > 0?stepWidthPercentAboveLow:stepWidthPercentBelowLow);
 
                                     // set the low knob's and bubble's new positions
-                                    offset(refs.minPtr, offsetFromPercent(stretchedLowPercent));
-                                    offset(refs.lowBub,
-                                        offsetFromPercent(percentFromOffset(offsetLeft(refs.minPtr) - halfWidth(refs.lowBub) + pointerHalfWidth)));
-
-                                    if(isDualKnob) {
-                                        // dual knob slider
-
-                                        /**
-                                         * The base percent for the high knob
-                                         * @type {number}
-                                         */
-                                        var rawHighPercent = percentFromDecodedValue(scope.decodedValues[refHigh]);
-
-                                        /**
-                                         * The width in percent of a step above the high value
-                                         * @type {number}
-                                         */
-                                        var stepWidthPercentAboveHigh = percentFromValue(scope[refHigh] + scope[stepWidth]) - rawHighPercent;
-
-                                        /**
-                                         * The width in percent of a step below the high value
-                                         * @type {number}
-                                         */
-                                        var stepWidthPercentBelowHigh = rawHighPercent - percentFromValue(scope[refHigh] - scope[stepWidth]);
-
-                                        /**
-                                         * The width in percent of the buffer below the high value
-                                         * @type {number}
-                                         */
-                                        var bufferWidthPercentHigh = rawHighPercent - percentFromValue(scope[refHigh] - scope.buffer);
-
-                                        /**
-                                         * The percent for the high knob after the stretch has been applied
-                                         * @type {number}
-                                         */
-                                        var stretchedHighPercent = rawHighPercent + percentStretch(stickyOffsetHigh, stickyOffsetHigh > 0?stepWidthPercentAboveHigh:stepWidthPercentBelowHigh);
-
-                                        if(stretchedLowPercent > rawHighPercent - bufferWidthPercentHigh) {
-                                            // if the low knob has reached its maximum
-
-                                            // get the new stretch amount for the low knob
-                                            stretchedLowPercent = rawLowPercent + percentStretch(stickyOffsetLow, bufferWidthPercentLow, true);
-
-                                            // and re-set the low knob's and bubble's new positions
-                                            offset(refs.minPtr, offsetFromPercent(stretchedLowPercent));
-                                            offset(refs.lowBub, offsetFromPercent(percentFromOffset(offsetLeft(refs.minPtr) - halfWidth(refs.lowBub) +
-                                                                                                    pointerHalfWidth)));
-                                        }
-
-                                        if(stretchedHighPercent < rawLowPercent + bufferWidthPercentLow) {
-                                            // if the high knob has reached its minimum
-
-                                            // get the new stretch amount for the high knob
-                                            stretchedHighPercent = rawHighPercent + percentStretch(stickyOffsetHigh, bufferWidthPercentHigh, true);
-                                        }
-
-                                        // set the high knob's and bubble's new positions
-                                        offset(refs.maxPtr, offsetFromPercent(stretchedHighPercent));
-                                        offset(refs.highBub, offsetFromPercent(percentFromOffset(offsetLeft(refs.maxPtr) - halfWidth(refs.highBub) +
-                                                                                                 pointerHalfWidth)));
-
-                                        // set the selection bar's new position and width
-                                        offset(refs.selBar, offsetFromPercent(stretchedLowPercent + ptrHalfWidthPercent));
-                                        refs.selBar.css({
-                                            width: offsetFromPercent(stretchedHighPercent - stretchedLowPercent)
-                                        });
-
-                                        // set the selection bubbles' new positions
-                                        offset(refs.selBub, offsetFromPercent(((stretchedLowPercent + stretchedHighPercent) / 2) - percentFromOffset(halfWidth(refs.selBub) + minOffset) + ptrHalfWidthPercent));
-                                        offset(refs.cmbBub, offsetFromPercent(((stretchedLowPercent + stretchedHighPercent) / 2) - percentFromOffset(halfWidth(refs.cmbBub) + minOffset) + ptrHalfWidthPercent));
-
-                                        // set the low unselected bar's new position and width
-                                        refs.unSelBarLow.css({
-                                            left : 0,
-                                            width: offsetFromPercent(stretchedLowPercent + ptrHalfWidthPercent)
-                                        });
-
-                                        // set the high unselected bar's new position and width
-                                        offset(refs.unSelBarHigh, offsetFromPercent(stretchedHighPercent + ptrHalfWidthPercent));
-                                        refs.unSelBarHigh.css({
-                                            right: 0
-                                        });
-
-                                        if(AngularSlider.inputtypes.range) {
-                                            // we're using range inputs
-
-                                            var ptrWidth = ptrHalfWidthPercent * 2;
-
-                                            // get the high input's new position
-                                            var highInputLeft = stretchedLowPercent + (bufferWidthPercentLow / 2);
-											var highInputWidth = 100 - highInputLeft;
-											highInputLeft += ptrWidth;
-
-                                            // get the low input's new width
-                                            var lowInputWidth = stretchedHighPercent - (bufferWidthPercentHigh / 2);
-
-											// get the selection inputs new position and width;
-											var selInputLeft = stretchedLowPercent + ptrWidth;
-											var selInputWidth = stretchedHighPercent - stretchedLowPercent - ptrWidth;
-
-											if(stretchedHighPercent <= stretchedLowPercent + ptrWidth) {
-												selInputLeft = stretchedLowPercent;
-												selInputWidth = stretchedHighPercent + ptrWidth - stretchedLowPercent;
-											}
-
-                                            // set the low input's new width
-                                            refs.minInput.css({
-                                                width: offsetFromPercent(lowInputWidth)
-                                            });
-
-                                            // set the high input's new position and width
-                                            refs.maxInput.css({
-                                                left : offsetFromPercent(highInputLeft),
-                                                width: offsetFromPercent(highInputWidth)
-                                            });
-
-                                            // set the selection input's new position and width
-                                            refs.selInput.css({
-                                                left : offsetFromPercent(selInputLeft),
-                                                width: offsetFromPercent(selInputWidth)
-                                            });
-                                        }
-                                    }
+                                    offset(refs.currPtr, offsetFromPercent(stretchedLowPercent));
+                                    offset(refs.currBub,
+                                        offsetFromPercent(percentFromOffset(offsetLeft(refs.currPtr) - halfWidth(refs.currBub) + pointerHalfWidth)));
                                 }
 
                                 /**
@@ -1054,108 +756,36 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                                  */
                                 function adjustBubbles() {
 
-                                    /**
-                                     * The bubble to use for dual knobs
-                                     * @type {object}
-                                     */
-                                    var bubToAdjust = refs.lowBub;
-
                                     // make sure the low value bubble is actually within the slider
-                                    fitToBar(refs.lowBub);
+                                    fitToBar(refs.currBub);
 
-                                    if(isDualKnob) {
-                                        // this is a dual knob slider
+                                    if(gap(refs.minBub, refs.currBub) < 5) {
+                                        // the low bubble overlaps the minLimit bubble
 
-                                        // make sure the high value and selection value bubbles are actually within the slider
-                                        fitToBar(refs.highBub);
-                                        fitToBar(refs.selBub);
+                                        // so hide the minLimit bubble
+                                        hide(refs.minBub);
+                                    } else {
+                                        // the low bubble doesn't overlap the minLimit bubble
 
-                                        if(gap(refs.lowBub, refs.highBub) < 10) {
-                                            // the low and high bubbles are overlapping
+                                        // single knob slider
 
-                                            // so hide them both
-                                            hide(refs.lowBub);
-                                            hide(refs.highBub);
+                                        // so show the minLimit slider
+                                        show(refs.minBub);
 
-                                            // and show the center bubble
-                                            show(refs.cmbBub);
-
-                                            // and make sure the center bubble is actually within the slider
-                                            fitToBar(refs.cmbBub);
-
-                                            // the center bubble is the bubble we care about now
-                                            bubToAdjust = refs.cmbBub;
-                                        } else {
-                                            // the low and high bubbles aren't overlapping
-
-                                            // so show the low and high bubbles
-                                            show(refs.lowBub);
-                                            show(refs.highBub);
-
-                                            // and hide the center bubble
-                                            hide(refs.cmbBub);
-                                            bubToAdjust = refs.highBub;
-                                        }
                                     }
 
-                                    if(gap(refs.flrBub, refs.lowBub) < 5) {
-                                        // the low bubble overlaps the floor bubble
+                                    if(gap(refs.currBub, refs.maxBub) < 5) {
+                                        // the low bubble overlaps the maxLimit bubble
 
-                                        // so hide the floor bubble
-                                        hide(refs.flrBub);
+                                        // so hide the maxLimit bubble
+                                        hide(refs.maxBub);
                                     } else {
-                                        // the low bubble doesn't overlap the floor bubble
+                                        // the low bubble doesn't overlap the maxLimit bubble
 
-                                        if(isDualKnob) {
-                                            // this is a dual knob slider
+                                        // no overlap
 
-                                            if(gap(refs.flrBub, bubToAdjust) < 5) {
-                                                // the bubble overlaps the floor bubble
-
-                                                // so hide the floor bubble
-                                                hide(refs.flrBub);
-                                            } else {
-                                                // no overlap
-
-                                                // so show the floor bubble
-                                                show(refs.flrBub);
-                                            }
-                                        } else {
-                                            // single knob slider
-
-                                            // so show the floor slider
-                                            show(refs.flrBub);
-                                        }
-                                    }
-
-                                    if(gap(refs.lowBub, refs.ceilBub) < 5) {
-                                        // the low bubble overlaps the ceiling bubble
-
-                                        // so hide the ceiling bubble
-                                        hide(refs.ceilBub);
-                                    } else {
-                                        // the low bubble doesn't overlap the ceiling bubble
-
-                                        if(isDualKnob) {
-                                            // dual knob slider
-
-                                            if(gap(bubToAdjust, refs.ceilBub) < 5) {
-                                                // the bubble overlaps the ceiling bubble
-
-                                                // so hide the ceiling bubble
-                                                hide(refs.ceilBub);
-                                            } else {
-                                                // no overlap
-
-                                                // so show the ceiling bubble
-                                                show(refs.ceilBub);
-                                            }
-                                        } else {
-                                            // no overlap
-
-                                            // so show the ceiling bubble
-                                            show(refs.ceilBub);
-                                        }
+                                        // so show the maxLimit bubble
+                                        show(refs.maxBub);
                                     }
                                 }
 
@@ -1165,8 +795,7 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                                 function onEnd() {
 
                                     // reset the offsets
-                                    stickyOffsetLow = 0;
-                                    stickyOffsetHigh = 0;
+                                    stickyOffset = 0;
 
                                     if(pointer) {
                                         // if we have a pointer reference
@@ -1182,7 +811,10 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                                     // reset the references
                                     pointer = null;
                                     ref = null;
-                                    dragRange = false;
+
+                                    if (scope.onEndFn) {
+                                        scope.onEndFn();
+                                    }
                                 }
 
                                 /**
@@ -1201,189 +833,50 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                                              */
                                             var currentX = event.clientX || event.x;
 
-                                            if(dragRange) {
-                                                // the entire range is being dragged
+                                            /**
+                                             * The new offset for the knob being dragged
+                                             * @type {number}
+                                             */
+                                            var newOffset = bringOffsetInRange(currentX + minOffset - offsetLeft(element) - halfWidth(pointer));
 
-                                                /**
-                                                 * The new offset for the low knob
-                                                 * @type {number}
-                                                 */
-                                                var newLowValue = valueFromOffset(currentX) - lowValueOffset;
+                                            /**
+                                             * The new offset percent for the knob being dragged
+                                             * @type {number}
+                                             */
+                                            var newPercent = percentFromOffset(newOffset);
 
-                                                /**
-                                                 * The new offset for the high knob
-                                                 * @type {number}
-                                                 */
-                                                var newHighValue = valueFromOffset(currentX) + highValueOffset;
-
-                                                if(newLowValue < minValue) {
-                                                    // the new low is outside of the slider
-
-                                                    // so bring the values back within range
-                                                    newHighValue += minValue - newLowValue;
-                                                    newLowValue = minValue;
-                                                } else if(newHighValue > maxValue) {
-                                                    // the new high value is outside of the slider
-
-                                                    // so bring the values back within range
-                                                    newLowValue -= newHighValue - maxValue;
-                                                    newHighValue = maxValue;
-                                                }
-
-                                                // get the offset percentages
-                                                var newLowPercent = percentFromValue(newLowValue);
-                                                var newHighPercent = percentFromValue(newHighValue);
-
-                                                // save the temporary sticky offset
-                                                stickyOffsetLow = newLowPercent;
-                                                stickyOffsetHigh = newHighPercent;
-
-                                                // round the raw values to steps and assign them to the knobs
-                                                scope[refLow] = newLowValue = roundToStep(newLowValue, scope.precision, scope[stepWidth], scope.floor, scope.ceiling);
-                                                scope[refHigh] = newHighValue = roundToStep(newHighValue, scope.precision, scope[stepWidth], scope.floor, scope.ceiling);
-
-                                                // keep the difference between both knobs the same
-                                                stickyOffsetLow = stickyOffsetLow - percentFromValue(newLowValue);
-                                                stickyOffsetHigh = stickyOffsetHigh- percentFromValue(newHighValue);
+                                            // If we use presetValues then we should set the newPercent according to the index size of presetValues;
+                                            if (scope.presetValues) {
+                                                newPercent = usePresetPercent(newPercent);
+                                                scope.decodedValues[ref] = getPresetIndex(newPercent);
+                                                scope[ref] = scope.encode(scope.decodedValues[ref]);
                                             } else {
-                                                // only one knob is being dragged
-
-                                                /**
-                                                 * The new offset for the knob being dragged
-                                                 * @type {number}
-                                                 */
-                                                var newOffset = bringOffsetInRange(currentX + minOffset - offsetLeft(element) - halfWidth(pointer));
-
-                                                /**
-                                                 * The new offset percent for the knob being dragged
-                                                 * @type {number}
-                                                 */
-                                                var newPercent = percentFromOffset(newOffset);
-
-                                                /**
-                                                 * The new value for the knob being dragged
-                                                 * @type {number}
-                                                 */
                                                 var newValue = scope.encode(minValueDecoded + (valueRangeDecoded * newPercent / 100.0));
 
                                                 // set the sticky offset for the low knob
-                                                stickyOffsetLow = newPercent;
-
-                                                if(isDualKnob) {
-                                                    // dual knob slider
-
-                                                    if(scope.buffer > 0) {
-                                                        // we need to account for the buffer
-
-                                                        if(ref === refLow) {
-                                                            // the low knob is being dragged
-
-                                                            if(newValue > scope[refHigh] - scope.buffer) {
-                                                                // the new value cuts into the buffer
-
-                                                                // so make the value respect the buffer
-                                                                newValue = scope[refHigh] - scope.buffer;
-                                                            }
-                                                        } else {
-                                                            // the high knob is being dragged
-
-                                                            if(newValue < scope[refLow] + scope.buffer) {
-                                                                // the new value cuts into the buffer
-
-                                                                // so make the value respect the buffer
-                                                                newValue = scope[refLow] + scope.buffer;
-                                                            }
-                                                        }
-                                                    } else {
-                                                        // we don't have to worry about a buffer
-                                                        var temp;
-                                                        if(ref === refLow) {
-                                                            // the low knob is being dragged
-
-                                                            if(newValue > scope[refHigh]) {
-                                                                // the new value is greater then the value of the high knob
-
-                                                                // so set the low value to what the high used to be
-                                                                scope[refLow] = scope[refHigh];
-
-                                                                // make sure the decoded values are updated
-                                                                scope.decodedValues[refLow] = scope.decodeRef(refLow);
-
-                                                                // switch the value reference
-                                                                ref = refHigh;
-
-                                                                // swap the element references
-                                                                temp = refs.minPtr;
-                                                                refs.minPtr = refs.maxPtr;
-                                                                refs.maxPtr = temp;
-
-                                                                // and the classes
-                                                                refs.maxPtr.removeClass('active').removeClass('high').addClass('low');
-                                                                refs.minPtr.addClass('active').removeClass('low').addClass('high');
-                                                            }
-                                                        } else {
-                                                            // the high knob is being dragged
-
-                                                            if(newValue < scope[refLow]) {
-                                                                // the new value is less than the value of the low knob
-
-                                                                // so set the high value to what the low used to be
-                                                                scope[refHigh] = scope[refLow];
-
-                                                                // make sure the decoded values are updated
-                                                                scope.decodedValues[refHigh] = scope.decodeRef(refHigh);
-
-                                                                // switch the value reference
-                                                                ref = refLow;
-
-                                                                // swap the element references
-                                                                temp = refs.minPtr;
-                                                                refs.minPtr = refs.maxPtr;
-                                                                refs.maxPtr = temp;
-
-                                                                // and the classes
-                                                                refs.minPtr.removeClass('active').removeClass('low').addClass('high');
-                                                                refs.maxPtr.addClass('active').removeClass('high').addClass('low');
-                                                            }
-                                                        }
-                                                    }
-                                                }
+                                                stickyOffset = newPercent;
 
                                                 // round the new value and assign it
-                                                scope[ref] = newValue = roundToStep(newValue, scope.precision, scope[stepWidth], scope.floor, scope.ceiling);
-
-                                                // update the decoded value
+                                                scope[ref] = newValue = roundToStep(newValue, scope.precision,
+                                                    scope[stepWidth], scope.minLimit, scope.maxLimit);
                                                 scope.decodedValues[ref] = scope.decodeRef(ref);
-
-                                                if(ref === refLow) {
-                                                    // the low knob is being dragged
-
-                                                    // so update the sticky offset for the low knob
-                                                    stickyOffsetLow = stickyOffsetLow - percentFromValue(newValue);
-
-                                                    // and ensure the high knob stays put
-                                                    stickyOffsetHigh = 0;
-                                                } else {
-                                                    // the high knob is being dragged
-
-                                                    // so update the sticky offset for the high knob
-                                                    stickyOffsetHigh = stickyOffsetLow - percentFromValue(newValue);
-
-                                                    // and ensure the low knob stays put
-                                                    stickyOffsetLow = 0;
-                                                }
+                                                stickyOffset = stickyOffset - percentFromValue(newValue);
                                             }
 
 											if(scope.ngChange) {
 												scope.ngChange();
 											}
-											ctrl.$setViewValue(scope[refLow]);
+											ctrl.$setViewValue(scope[refSelected]);
 
                                             // update the DOM
                                             setPointers();
                                             adjustBubbles();
 
                                         });
+
+                                        if (scope.onMoveFn) {
+                                            scope.onMoveFn();
+                                        }
                                     }
                                 }
 
@@ -1401,12 +894,6 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
 
 									event.preventDefault();
 
-									/**
-									 * The current x position of the mouse/finger/etc.
-									 * @type {number}
-									 */
-									var currentX = event.clientX || event.x;
-
                                     // save the pointer reference
                                     pointer = ptr;
 
@@ -1416,17 +903,8 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                                     // set the knob/bar to active
                                     pointer.addClass('active');
 
-                                    if(ref === refSel) {
-                                        // the selection bar is being dragged
-
-                                        // so tell everyone else this is the case
-                                        dragRange = true;
-
-                                        var startValue = valueFromOffset(currentX);
-
-                                        // and save the start positions
-                                        lowValueOffset = startValue - scope[refLow];
-                                        highValueOffset = scope[refHigh] - startValue;
+                                    if (scope.onStartFn) {
+                                        scope.onStartFn();
                                     }
 
                                     onMove(event);
@@ -1436,134 +914,69 @@ angular.module('vr.directives.slider', ['ngTouch']).directive('slider',
                                  * Bind the various events to the various DOM elements
                                  */
                                 function setBindings() {
-                                    if(AngularSlider.inputtypes.range) {
-                                        // we're using range inputs
+                                    // we're using normal DOM elements
 
-                                        /**
-                                         * Bind the events necessary for a range input
-                                         * @param {object} elem
-                                         * @param {object} ptr
-                                         * @param {string} rf
-                                         */
-                                        var bindSlider = function(elem, ptr, rf) {
+                                    /**
+                                     * Start event
+                                     * @param {object} elem
+                                     * @param {string} rf
+                                     * @param {object} [ptr]
+                                     */
+                                    var bindSwipeStart = function(elem, rf, ptr) {
 
-                                            // make sure the element has all the methods and properties we'll need
-                                            elem = angularize(elem);
+                                        // make sure the element has all the methods and properties we'll need
+                                        elem = angularize(elem);
 
-                                            /**
-                                             * Start event
-                                             * @param {object} coords
-                                             * @param {event} ev
-                                             */
-                                            function start(coords, ev) {
+                                        // if no pointer reference is supplied, reference the element given
+                                        if(angular.isUndefined(ptr)) {
+                                            ptr = elem;
+                                        } else {
+                                            ptr = angularize(ptr);
+                                        }
+
+                                        // bind the swipe start event to the element
+                                        $swipe.bind(elem, {
+                                            start: function(coords, ev) {
                                                 onStart(ev, ptr, rf);
                                             }
+                                        });
+                                    };
 
-                                            /**
-                                             * End event
-                                             * @param {object} coords
-                                             * @param {event} ev
-                                             */
-                                            function end(coords, ev) {
+                                    /**
+                                     * Move event
+                                     * @param {object} elem
+                                     */
+                                    var bindSwipe = function(elem) {
+
+                                        // make sure the element has all the methods and properties we'll need
+                                        elem = angularize(elem);
+
+                                        // bind the swipe move, end, and cancel events
+                                        $swipe.bind(elem, {
+                                            move  : function(coords, ev) {
+                                                onMove(ev);
+                                            },
+                                            end   : function(coords, ev) {
                                                 onMove(ev);
                                                 onEnd();
+                                            },
+                                            cancel: function(coords, ev) {
+                                                onEnd(ev);
                                             }
+                                        });
+                                    };
 
-                                            // bind events to the range input
-											$swipe.bind(elem, {
-												start : start,
-												move  : function(coords, ev) {
-													onMove(ev);
-												},
-												end   : end,
-												cancel: function(coords, ev) {
-													onEnd(ev);
-												}
-											});
-                                        };
+                                    // bind the common events to the various common elements
+                                    bindSwipe($document);
+                                    bindSwipeStart(refs.currPtr, refSelected);
+                                    bindSwipeStart(refs.currBub, refSelected);
+                                    bindSwipeStart(refs.minBub, refSelected, refs.currPtr);
 
-                                        // bind the events to the low value range input
-                                        bindSlider(refs.minInput, refs.minPtr, refLow);
+                                    // bind the single knob specific events to the single knob specific elements
+                                    bindSwipeStart(refs.maxBub, refSelected, refs.currPtr);
+                                    bindSwipeStart(refs.fullBar, refSelected, refs.currPtr);
 
-                                        if(isDualKnob) {
-                                            // bind the events to the high value range input
-                                            bindSlider(refs.maxInput, refs.maxPtr, refHigh);
-                                            // bind the events to the selection bar range input
-                                            bindSlider(refs.selInput, refs.selBar, refSel);
-                                        }
-                                    } else {
-                                        // we're using normal DOM elements
 
-                                        /**
-                                         * Start event
-                                         * @param {object} elem
-                                         * @param {string} rf
-                                         * @param {object} [ptr]
-                                         */
-                                        var bindSwipeStart = function(elem, rf, ptr) {
-
-                                            // make sure the element has all the methods and properties we'll need
-                                            elem = angularize(elem);
-
-                                            // if no pointer reference is supplied, reference the element given
-                                            if(angular.isUndefined(ptr)) {
-                                                ptr = elem;
-                                            } else {
-                                                ptr = angularize(ptr);
-                                            }
-
-                                            // bind the swipe start event to the element
-                                            $swipe.bind(elem, {
-                                                start: function(coords, ev) {
-                                                    onStart(ev, ptr, rf);
-                                                }
-                                            });
-                                        };
-
-                                        /**
-                                         * Move event
-                                         * @param {object} elem
-                                         */
-                                        var bindSwipe = function(elem) {
-
-                                            // make sure the element has all the methods and properties we'll need
-                                            elem = angularize(elem);
-
-                                            // bind the swipe move, end, and cancel events
-                                            $swipe.bind(elem, {
-                                                move  : function(coords, ev) {
-                                                    onMove(ev);
-                                                },
-                                                end   : function(coords, ev) {
-                                                    onMove(ev);
-                                                    onEnd();
-                                                },
-                                                cancel: function(coords, ev) {
-                                                    onEnd(ev);
-                                                }
-                                            });
-                                        };
-
-                                        // bind the common events to the various common elements
-                                        bindSwipe($document);
-                                        bindSwipeStart(refs.minPtr, refLow);
-                                        bindSwipeStart(refs.lowBub, refLow);
-                                        bindSwipeStart(refs.flrBub, refLow, refs.minPtr);
-                                        if(isDualKnob) {
-                                            // bind the dual knob specific events to the dual knob specific elements
-                                            bindSwipeStart(refs.maxPtr, refHigh);
-                                            bindSwipeStart(refs.highBub, refHigh);
-                                            bindSwipeStart(refs.ceilBub, refHigh, refs.maxPtr);
-                                            bindSwipeStart(refs.selBar, refSel);
-                                            bindSwipeStart(refs.selBub, refSel, refs.selBar);
-                                            bindSwipeStart(refs.unSelBarLow, refLow, refs.minPtr);
-                                            bindSwipeStart(refs.unSelBarHigh, refHigh, refs.maxPtr);
-                                        } else {
-                                            // bind the single knob specific events to the single knob specific elements
-                                            bindSwipeStart(refs.ceilBub, refLow, refs.minPtr);
-                                            bindSwipeStart(refs.fullBar, refLow, refs.minPtr);
-                                        }
-                                    }
                                 }
 
                                 // update the DOM
