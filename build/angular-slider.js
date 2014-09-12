@@ -806,15 +806,16 @@ angular.module('ghs.directives.slider', ['ngTouch']).directive('slider',
 
                                         // the pointer is no longer active
                                         pointer.removeClass('active');
+
+                                        if (scope.onEndFn) {
+                                            scope.onEndFn();
+                                        }
                                     }
 
                                     // reset the references
                                     pointer = null;
                                     ref = null;
 
-                                    if (scope.onEndFn) {
-                                        scope.onEndFn();
-                                    }
                                 }
 
                                 /**
