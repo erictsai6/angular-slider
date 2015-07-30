@@ -194,7 +194,7 @@ angular.module('ghs.directives.slider', ['ngTouch']).directive('slider',
 			function roundTo(value, step) {
 				return Math.floor((value / step) + 0.5) * step;
 			}
-           
+
             /**
              * Wraps the given expression in whatever start and end symbol this app uses
              * @param {string} exp
@@ -358,7 +358,7 @@ angular.module('ghs.directives.slider', ['ngTouch']).directive('slider',
                                 stepWidth    : 0,
                                 precision    : 0,
                                 stickiness   : 0,
-                                ngModel      : 0                               
+                                ngModel      : 0
                             };
 
                             /**
@@ -374,7 +374,7 @@ angular.module('ghs.directives.slider', ['ngTouch']).directive('slider',
                                     return '' + value;
                                 }
                                 return scope.translateFn({value: value});
-                            };                           
+                            };
 
                             /**
                              * Encode the value given
@@ -737,7 +737,7 @@ angular.module('ghs.directives.slider', ['ngTouch']).directive('slider',
                                      * The width in percent of a step below the low value
                                      * @type {number}
                                      */
-                                    var stepWidthPercentBelowLow = rawLowPercent - percentFromValue(scope[refSelected] - scope[stepWidth]);                                    
+                                    var stepWidthPercentBelowLow = rawLowPercent - percentFromValue(scope[refSelected] - scope[stepWidth]);
 
                                     /**
                                      * The percent for the low knob after the stretch has been applied
@@ -808,7 +808,7 @@ angular.module('ghs.directives.slider', ['ngTouch']).directive('slider',
                                         pointer.removeClass('active');
 
                                         if (scope.onEndFn) {
-                                            scope.onEndFn();
+                                          scope.onEndFn();
                                         }
                                     }
 
@@ -832,7 +832,7 @@ angular.module('ghs.directives.slider', ['ngTouch']).directive('slider',
                                              * The current x position of the mouse/finger/etc.
                                              * @type {number}
                                              */
-                                            var currentX = event.clientX || event.x;
+                                            var currentX = event.clientX || event.x || event.changedTouches[0].clientX;
 
                                             /**
                                              * The new offset for the knob being dragged
