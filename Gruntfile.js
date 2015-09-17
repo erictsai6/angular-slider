@@ -38,16 +38,25 @@ module.exports = function(grunt){
                     force: true
                 }
             }
+        },
+        copy: {
+            main: {
+                expand: true,
+                cwd: 'src/',
+                src: '**',
+                dest: 'build/',
+                filter: 'isFile'
+            }
         }
     });
 
     // Load the plugin that provides the "uglify" task.
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-jshint');
+    grunt.loadNpmTasks('grunt-contrib-copy');
+    grunt.loadNpmTasks('grunt-contrib-concat');
 
     // Default task(s).
-    grunt.registerTask('default', ['jshint:all', 'uglify', 'concat:prod']);
-
-    grunt.loadNpmTasks('grunt-contrib-concat');
+    grunt.registerTask('default', ['jshint:all', 'uglify', 'concat:prod', 'copy:main']);
 
 };
